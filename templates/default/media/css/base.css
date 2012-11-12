@@ -1,0 +1,211 @@
+html, * {
+	margin: 0px;
+	padding: 0px;
+	font: normal 13px Arial, Sans-serif;
+}
+.content {
+	margin: 0 auto;
+    /*width: 850px;*/
+    width: 960px;
+	padding: 0 15px;
+	background: #fff;
+	padding-bottom: 20px;
+}
+.header {
+	padding-top: 18px;
+	padding-left: 10px;
+	margin-bottom: 18px;
+    height:50px;
+}
+
+.header .logo {
+	background: url("/media/img/logo.jpg") 0 0 no-repeat;
+	height: 50px;
+	width: 50px;
+    float:left;
+}
+
+/*.header .title {
+    float:left;
+    width:900px;
+}*/
+
+.header h1 {
+	color: #373737;
+	font: normal 30px Arial;
+	text-shadow: 0 1px 1px #cdcdcd;
+    text-align: center;
+    margin-bottom: 30px;
+    margin-top: 10px;
+}
+
+.graphs {
+	border-top: dotted 1px #C5C5C5;
+	border-bottom: dotted 1px #c5c5c5;
+	color: #484848;
+	line-height: 20px;
+	overflow: hidden;
+	padding: 15px;
+	text-align: justify;
+}
+
+.graphs h1 {
+	color: #373737;
+	font: normal 21px Arial;
+	text-shadow: 0 1px 1px #cdcdcd;
+	margin-bottom: 10px;
+}
+
+.graphs a.error{
+	color: red;
+	display: none;
+	margin-left: 5px;
+}
+
+.graphs h3 {
+    margin: 20px 0px 10px 0px;
+}
+
+.graphs p {
+	/*text-indent: 20px;*/
+	/*margin-bottom: 10px;*/
+}
+
+.graphs ul {
+    margin-left: 30px;
+}
+
+.graphs hr {
+    border: 0px;
+    border-top: solid 1px #c5c5c5;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+.graphs table {
+    width:100%;
+}
+
+.graphs td {
+    border:1px solid;
+}
+
+.graphs .row {
+    width:100%;
+    float:left;
+    margin-top:10px;
+    margin-bottom:20px;
+    text-align:center;
+    background-color: whitesmoke;
+    padding-top:20px;
+    padding-bottom:10px;
+}
+
+.graphs .row .gauge-graph{
+    float:left;
+    margin-top:10px;
+}
+
+.graphs .row .lineal-graph{
+    float:left;
+}
+
+.footer {
+	text-align: right;
+	margin-top: 10px;
+}
+.footer a {
+	color: #7a317a;
+	font: bold 13px Arial;
+	text-decoration: none;
+}
+.footer a:hover {
+	text-decoration: underline;
+}
+
+.center {
+    text-align:center;
+}
+
+.show-table {
+    display: inline-block;
+    margin-top: 10px;
+    margin-left: 250px;
+}
+
+.table-sensor {
+    display:none;
+}
+
+table {  
+    text-align:center;
+}
+
+table th {
+    background-color: gray;
+    color:white;
+    border:1px;
+    font-weight: bold;
+}
+
+table td {
+    border:1px;
+    width: 150px;
+    background-color: white;
+}
+
+.pagination {
+    width:100%;
+    text-align:center;
+    padding: 20px;
+    font-size: 12px;
+}
+
+.pagination .page {
+    background: #F0F0F0;
+    border: 1px solid #B4B4B4;
+    color: #505050;
+    padding: 6px;
+    text-decoration: none;
+}
+.pagination .page:hover {
+    background: #E1E1E1;
+    border: 1px solid #B4B4B4;
+    color: #505050;
+    padding: 6px;
+    text-decoration: none;
+}
+
+.pagination .current {
+    background: #CCC;
+    border: 1px solid #B4B4B4;
+    color: #333;
+    padding: 6px;
+}
+
+.pagination .current:hover {
+    background: #CCC;
+    border: 1px solid #B4B4B4;
+    color: #333;
+    padding: 6px;
+}
+
+.pagination .prev, .pagination .next {
+    background: #F0F0F0;
+    border: 1px solid #B4B4B4;
+    color: #505050;
+    padding: 6px;
+    text-decoration: none;
+}
+
+.pagination .prev:hover, .pagination .next:hover {
+    background: #E1E1E1;
+    border: 1px solid #B4B4B4;
+    color: #505050;
+    padding: 6px;
+    text-decoration: none;
+}
+
+.pagination .disabled {
+    display: none;
+}

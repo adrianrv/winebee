@@ -1,0 +1,593 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load l10n %}
+{% block extrahead %}
+    <script src="/media/js/RGraph.common.core.js" ></script>
+    <script src="/media/js/RGraph.common.dynamic.js" ></script>
+    <script src="/media/js/RGraph.common.tooltips.js" ></script>
+    <script src="/media/js/RGraph.common.effects.js" ></script>
+    <script src="/media/js/RGraph.common.key.js" ></script>
+    <script src="/media/js/RGraph.line.js" ></script>
+    <script src="/media/js/RGraph.gauge.js" ></script>
+    <script src="http://code.jquery.com/jquery-latest.js" ></script>
+    <script type="text/javascript">
+    
+        function intArray2strArrayWithUnits (intArray, dateArray, units){
+            strArray = [];
+            for (var i=0; i<intArray.length; i++) {
+                strArray[i] = intArray[i].toString() + ' ' + units + ' {% trans "at" %} ' + dateArray[i].toString();
+            }
+            return strArray;
+        }
+        
+        function Array2OddOnlyArray (completeArray){
+            oddArray = [];
+            for (var i=0; i<completeArray.length; i++) {
+                if (i % 2 == 0)
+                    oddArray[i] = completeArray[i].toString();
+                else
+                    oddArray[i] = '';
+            }
+            return oddArray;
+        }
+        
+        var aux_temp = [];
+        var aux_hum = [];
+        var aux_lum = [];
+        var aux_fecha = [];
+        var fuera_linea = [];
+        NUM_FILAS = 3;
+        
+        /* Define array to store data and widgets */
+        var TOTAL_NODES = {{ sensors|length }};
+        var temperature_array = new Array({{ sensors|length }});
+        var humidity_array = new Array({{ sensors|length }});
+        var luminosity_array = new Array({{ sensors|length }});
+        var gauge_widget_array = new Array({{ sensors|length }});
+
+        var date_array = new Array({{ sensors|length }});
+
+        //var gauges = new Array({{ sensors|length }});       
+        //var fake_gauges = new Array(3);
+        //var r = new Array(NUM_FILAS);
+        //var lines = new Array(NUM_FILAS);
+        
+        window.onload = function () {
+        
+        {% for node, values in sensors.items %}
+            
+            /* Data from sensor {{ node.id }}: {{ node.name }} */
+            temperature_array[{{ node.id }}] = RGraph.array_pad([{% for v in values reversed%}{{ v.temperature|unlocalize }}{% if not forloop.last %},{% endif %}{% endfor %}], {{ values|length }});
+            humidity_array[{{ node.id }}] = RGraph.array_pad([{% for v in values reversed %}{{ v.humidity }}{% if not forloop.last %},{% endif %}{% endfor %}], {{ values|length }});
+            luminosity_array[{{ node.id }}] = RGraph.array_pad([{% for v in values reversed %}{{ v.luminosity|unlocalize }}{% if not forloop.last %},{% endif %}{% endfor %}], {{ values|length }});
+            //date_array[{{ node.id }}] = [{% for v in values %}'{{ v.date|date:"d/m/Y" }}       \r\n\r\n{{ v.date|date:"H:i:s" }}'{% if not forloop.last %},{% endif %}{% endfor %}];
+            date_array[{{ node.id }}] = [{% for v in values reversed %}'{{ v.date|date:"d M Y H:i:s" }}'{% if not forloop.last %},{% endif %}{% endfor %}];
+            
+            {% if node.id == 1 %}
+                console.log('Nada mas empezar');
+                console.log(date_array[{{ node.id }}]);
+            {% endif %}
+
+            /* If there is data in temperature_array, show the graphs */
+            if (temperature_array[{{ node.id }}].length != 0) {                              
+
+                /* Gauge widgets to show last temperature value  */
+                gauge_widget_array[{{ node.id }}] = new RGraph.Gauge('gauge-widget-{{ node.id }}', 0, 40, 0);
+                gauge_widget_array[{{ node.id }}].Set('chart.title.bottom', 'T\u00B0');
+                gauge_widget_array[{{ node.id }}].backgroundColor = 'white';
+                gauge_widget_array[{{ node.id }}].boxShadow = '0 0 25px gray';
+                gauge_widget_array[{{ node.id }}].canvas.style.boxShadow = '';
+                gauge_widget_array[{{ node.id }}].canvas.style.zIndex = 0;
+                gauge_widget_array[{{ node.id }}].canvas.style.width  = '200px';
+                gauge_widget_array[{{ node.id }}].canvas.style.height = '200px';
+                gauge_widget_array[{{ node.id }}].Draw();
+                
+                /* Gauge effect to set the last value */
+                if (temperature_array[{{ node.id }}].length > 0) {
+                    gauge_widget_array[{{ node.id }}].value = temperature_array[{{ node.id }}][temperature_array[{{ node.id }}].length-1];
+                    RGraph.Effects.Gauge.Grow(gauge_widget_array[{{ node.id }}]);
+                }
+
+                $("#show-table-{{ node.id }}").click(function() {
+                    $("#table-sensor-{{ node.id }}").toggle("slow")
+                    if ($("#show-table-{{ node.id }}").text() == '{% trans "Show more data (no auto-update)" %}')
+                        $("#show-table-{{ node.id }}").text('{% trans "Hide data" %}');
+                    else
+                        $("#show-table-{{ node.id }}").text('{% trans "Show more data (no auto-update)" %}');
+                    return false;
+                });
+
+
+
+            /* If not temperature not showing graph => show message */
+            } else {
+                $('#gauge-widget-{{ node.id }}').css('display', 'none');
+                $('#linear-graph-{{ node.id }}').css('display', 'none');
+                $('#options-sensor-{{ node.id }}').css('display', 'none');
+                
+                $("#sensor-{{node.id}}-error").text(' ({% trans "No data found" %})');
+                $("#sensor-{{node.id}}-error").toggle("slow");
+            }
+        {% endfor %}
+
+        function update_data_array () {
+            new_data = this.responseText.split('|');
+            for (var x=0; x < new_data.length; x++) {
+                if (new_data[x] == 'ERROR') {
+                    /* Just ignore the data of this node */
+                } else {
+                    new_node_data = new_data[x].split(' ');
+                    /* The incoming data of this node, need to have 8 elements */
+                    /* Response may be like: 1 16 558 672 17 Sep 2012 18:04:01 */
+                    if (new_node_data.length == 8) {
+                        node_id = new_node_data[0] // node id
+                        new_temperature = new_node_data[1] // temperature
+                        new_humidity = new_node_data[2] // humidity
+                        new_luminosity = new_node_data[3] // luminosity
+                        new_date = new_node_data[4] + ' ' + new_node_data[5] + ' ' + new_node_data[6] + ' '// date
+                        new_date += new_node_data[7] // and time
+                        
+                        if (node_id == 1) {
+                            console.log('Node: ' + node_id);
+                            console.log('Temperature: ' + new_temperature);
+                            console.log('Humidity: ' + new_humidity);
+                            console.log('Luminosity: ' + new_luminosity);
+                            console.log('Date: ' + new_date);
+                            //console.log('Last date in array: ' + date_array[node_id][date_array[node_id].length-1]);
+                        }
+                                                
+                        /* Here is where the graphs arrays are updated */                       
+
+                        if (date_array[node_id][date_array[node_id].length-1] != new_date) {
+
+                            if (date_array[node_id].length > 0) {
+                            
+                                if (node_id == 1) {
+                                    console.log('Antes:');
+                                    console.log(date_array[node_id]);
+                                    console.log('Nuevo dato:' + new_date);
+                                    console.log('Eliminamos primer dato: ' + date_array[node_id].shift());
+                                    date_array[node_id].push(new_date);
+                                    console.log('Después:');
+                                    console.log(date_array[node_id]);
+                                }else{
+                                    date_array[node_id].shift();
+                                    date_array[node_id].push(new_date);
+                                }
+                            }
+                                
+                            if (temperature_array[node_id].length > 0) {
+                                temperature_array[node_id].shift();
+                                temperature_array[node_id].push(new_temperature);
+                            }
+                                
+                            if (humidity_array[node_id].length > 0) {
+                                humidity_array[node_id].shift();
+                                humidity_array[node_id].push(new_humidity);
+                            }
+                            
+                            if (luminosity_array[node_id].length > 0) {
+                                luminosity_array[node_id].shift();
+                                luminosity_array[node_id].push(new_luminosity);
+                            }
+                        /* In this case we have received the same last data from database, so Node may be offline */
+
+                        } else {
+
+                            $("#sensor-" + node_id + "-error").text(' ({% trans "Node offline" %})');
+                            $("#sensor-" + node_id + "-error").show("slow");
+                        }
+                        
+                    } else {
+                        /* Just ignore the data of this node */
+                    }
+                }
+                console.log('');
+            }
+        }
+
+        /* This function update the graphs getting new data by ajax */
+        function update_graphs () {
+            delete line_temperature;
+            delete line_humidity;
+            delete line_luminosity;
+            
+            var line_temperature = new Array([{{ sensors|length }}]);
+            var line_humidity = new Array([{{ sensors|length }}]);
+            var line_luminosity = new Array([{{ sensors|length }}]);
+            
+            RGraph.AJAX('/getdata/', update_data_array);
+            
+            {% for node in sensors %}
+            
+                RGraph.ObjectRegistry.Clear(document.getElementById('linear-graph-{{ node.id }}'));
+                //RGraph.ObjectRegistry.Clear(document.getElementById('gauge-widget-{{ node.id }}'));
+                RGraph.Reset(document.getElementById('linear-graph-{{ node.id }}'));
+                //RGraph.Reset(document.getElementById('gauge-widget-{{ node.id }}'));
+                
+                /* Delete the oldest elements in arrays */
+                /*TODO: moved
+                if (date_array[{{ node.id }}].length > 0)
+                    date_array[{{ node.id }}].splice(0,1);
+                if (temperature_array[{{ node.id }}].length > 0)
+                    temperature_array[{{ node.id }}].splice(0,1);
+                if (humidity_array[{{ node.id }}].length > 0)
+                    humidity_array[{{ node.id }}].splice(0,1);
+                if (luminosity_array[{{ node.id }}].length > 0)
+                    luminosity_array[{{ node.id }}].splice(0,1);
+                */
+                
+                /* If there is no data in temperature_array, not show the graphs */
+                if (temperature_array[{{ node.id }}].length != 0) {
+                    
+                    /* Gauge effect to set the last value */
+                    if (temperature_array[{{ node.id }}].length > 0) {
+                        gauge_widget_array[{{ node.id }}].value = RGraph.random(15,18);//temperature_array[{{ node.id }}][temperature_array[{{ node.id }}].length-1];
+                        RGraph.Effects.Gauge.Grow(gauge_widget_array[{{ node.id }}]);
+                    }
+
+                     /* Linear graph for all data (history) */
+                    var gutterLeft = 100;
+                    var gutterRight = 25;
+                    var gutterTop = 25;
+                    var gutterBottom = 120;
+                    
+                    line_temperature[{{ node.id }}] = new RGraph.Line('linear-graph-{{ node.id }}', temperature_array[{{ node.id }}]);
+                    line_temperature[{{ node.id }}].Set('chart.ymax', 30);
+                    line_temperature[{{ node.id }}].Set('chart.hmargin', 5);
+                    line_temperature[{{ node.id }}].Set('chart.gutter.right', gutterRight);
+                    line_temperature[{{ node.id }}].Set('chart.gutter.left', gutterLeft);
+                    line_temperature[{{ node.id }}].Set('chart.gutter.top', gutterTop);
+                    line_temperature[{{ node.id }}].Set('chart.gutter.bottom', gutterBottom);
+                    line_temperature[{{ node.id }}].Set('chart.text.angle', 90);
+                    line_temperature[{{ node.id }}].Set('chart.text.size', 8);
+                    line_temperature[{{ node.id }}].Set('chart.labels', Array2OddOnlyArray(date_array[{{ node.id }}]));
+                    //line_temperature[{{ node.id }}].Set('chart.tickmarks', 'circle');
+                    /* It is not possible to use integer arrays, so we convert this integer array to strings array and add a meassurement unit */
+                    line_temperature[{{ node.id }}].Set('chart.tooltips', temperature_array[{{ node.id }}]);//intArray2strArrayWithUnits(temperature_array[{{ node.id }}], date_array[{{ node.id }}], '{% trans "º C" %}'));
+                    line_temperature[{{ node.id }}].Set('chart.colors', ['red', 'green', 'blue']);
+                    line_temperature[{{ node.id }}].Set('chart.key', ['{% trans "Temperature" %}', '{% trans "Humidity" %}', '{% trans "Luminosity" %}']);
+                    line_temperature[{{ node.id }}].Set('chart.key.position', 'gutter');
+                    line_temperature[{{ node.id }}].Set('chart.key.position.gutter.boxed', false);
+                    line_temperature[{{ node.id }}].Set('chart.key.position.x', 275);
+                    line_temperature[{{ node.id }}].Set('chart.noaxes', true);
+                    line_temperature[{{ node.id }}].Set('chart.ylabels', false);
+                    line_temperature[{{ node.id }}].Draw();
+            
+                    line_humidity[{{ node.id }}] = new RGraph.Line('linear-graph-{{ node.id }}', humidity_array[{{ node.id }}]);
+                    line_humidity[{{ node.id }}].Set('chart.ymax', 1000);
+                    line_humidity[{{ node.id }}].Set('chart.background.grid', false);
+                    line_humidity[{{ node.id }}].Set('chart.colors', ['green']);
+                    line_humidity[{{ node.id }}].Set('chart.hmargin', 5);
+                    line_humidity[{{ node.id }}].Set('chart.noaxes', true);
+                    line_humidity[{{ node.id }}].Set('chart.gutter.right', gutterRight);
+                    line_humidity[{{ node.id }}].Set('chart.gutter.left', gutterLeft);
+                    line_humidity[{{ node.id }}].Set('chart.gutter.top', gutterTop);
+                    line_humidity[{{ node.id }}].Set('chart.gutter.bottom', gutterBottom);
+                    //line_humidity[{{ node.id }}].Set('chart.tickmarks', 'circle');
+                    /* It is not possible to use integer arrays, so we convert this integer array to strings array and add a meassurement unit */
+                    line_humidity[{{ node.id }}].Set('chart.tooltips', humidity_array[{{ node.id }}]);//intArray2strArrayWithUnits(humidity_array[{{ node.id }}], date_array[{{ node.id }}], ' %'));
+                    line_humidity[{{ node.id }}].Set('chart.ylabels', false);
+                    line_humidity[{{ node.id }}].Draw();
+            
+                    line_luminosity[{{ node.id }}] = new RGraph.Line('linear-graph-{{ node.id }}', luminosity_array[{{ node.id }}]);
+                    line_luminosity[{{ node.id }}].Set('chart.ymax', 1000);
+                    line_luminosity[{{ node.id }}].Set('chart.background.grid', false);
+                    line_luminosity[{{ node.id }}].Set('chart.ylabels', false);
+                    line_luminosity[{{ node.id }}].Set('chart.noaxes', true);
+                    line_luminosity[{{ node.id }}].Set('chart.colors', ['blue']);
+                    line_luminosity[{{ node.id }}].Set('chart.hmargin', 5);
+                    line_luminosity[{{ node.id }}].Set('chart.gutter.right', gutterRight);
+                    line_luminosity[{{ node.id }}].Set('chart.gutter.left', gutterLeft);
+                    line_luminosity[{{ node.id }}].Set('chart.gutter.top', gutterTop);
+                    line_luminosity[{{ node.id }}].Set('chart.gutter.bottom', gutterBottom);
+                    //line_luminosity[{{ node.id }}].Set('chart.tickmarks', 'circle');
+                    /* It is not possible to use integer arrays, so we convert this integer array to strings array and add a meassurement unit */
+                    line_luminosity[{{ node.id }}].Set('chart.tooltips', luminosity_array[{{ node.id }}]);//intArray2strArrayWithUnits(luminosity_array[{{ node.id }}], date_array[{{ node.id }}], ' {% trans "Lumens" %}'));
+            
+                    /* This draws the extra axes. It's run whenever the line_luminosity object is drawn */
+
+                    Redraw_axes_node_{{ node.id }} = function () {
+                        RGraph.DrawAxes(line_temperature[{{ node.id }}], {
+                                            'axis.x': line_temperature[{{ node.id }}].canvas.width - gutterRight + 5,
+                                            'axis.color': 'red',
+                                            'axis.text.color': 'red',
+                                            'axis.max': 30,
+                                            'axis.min': 0,
+                                            'axis.align': 'right'
+                                       });
+                        RGraph.DrawAxes(line_humidity[{{ node.id }}], {
+                                            'axis.x': 90,
+                                            'axis.y': 25,
+                                            'axis.color': 'green',
+                                            'axis.text.color': 'green',
+                                            'axis.max': 1000
+                                       });
+                        RGraph.DrawAxes(line_luminosity[{{ node.id }}], {
+                                            'axis.x': 45,
+                                            'axis.y': 25,
+                                            'axis.color': 'blue',
+                                            'axis.text.color': 'blue',
+                                            'axis.max': 1000
+                                           });
+                    };
+                    RGraph.AddCustomEventListener(line_luminosity[{{ node.id }}], 'ondraw', Redraw_axes_node_{{ node.id }});
+            
+                    line_luminosity[{{ node.id }}].Draw();
+                }
+
+            {% endfor %}
+            setTimeout(function(){ update_graphs() }, 10000);
+        }
+        update_graphs();
+        
+    } /* End function window.onload */
+    
+    
+            /*
+            data_r = RGraph.array_pad([], 500);
+            for (var x=0; x<500; x++) {
+                data_r[x] = RGraph.random(15,18);
+            }
+            
+            for (var i=0; i<NUM_FILAS+1; i++) { 
+                gauges[i] = new RGraph.Gauge('gauge-graph-' + i, 0, 20, 0);
+                gauges[i].Set('chart.title.bottom', 'T\u00B0');
+                gauges[i].backgroundColor = 'white';
+                gauges[i].boxShadow = '0 0 25px gray';
+                gauges[i].canvas.style.boxShadow = '';           
+                gauges[i].canvas.style.zIndex = 0;
+                gauges[i].canvas.style.width  = '150px';
+                gauges[i].canvas.style.height = '150px';
+                gauges[i].Draw();
+                aux_temp[i] = 0;
+                aux_hum[i] = 0;
+                aux_lum[i] = 0;
+                gauges[i].value = aux_temp[i];
+                RGraph.Effects.Gauge.Grow(gauges[i]);
+            }
+            
+            for (var i=0; i<2; i++) { 
+                fake_gauges[i] = new RGraph.Gauge('fake-gauge-graph-' + i, 0, 20, 0);
+                fake_gauges[i].Set('chart.title.bottom', 'T\u00B0');
+                fake_gauges[i].backgroundColor = 'white';
+                fake_gauges[i].boxShadow = '0 0 25px gray';
+                fake_gauges[i].canvas.style.boxShadow = '';           
+                fake_gauges[i].canvas.style.zIndex = 0;
+                fake_gauges[i].canvas.style.width  = '150px';
+                fake_gauges[i].canvas.style.height = '150px';
+                fake_gauges[i].Draw();
+                aux_temp[i] = 0;
+                aux_hum[i] = 0;
+                aux_lum[i] = 0;
+                fake_gauges[i].value = aux_temp[i];
+                RGraph.Effects.Gauge.Grow(fake_gauges[i]);
+            }
+*/
+/*            function myCallback() {
+                valores = this.responseText.split('|');
+
+                for (var s=0; s < 3; s++){
+                    fuera_linea[s] = false;
+                    valores[s] = valores[s].split(' ');
+                    if ((valores[s][0] != 'ERROR') && (aux_fecha[s] != (valores[s][3] + ' ' + valores[s][4]))){
+                        aux_temp[s] = parseFloat(valores[s][0]);
+                        aux_hum[s] = parseFloat(valores[s][1]);
+                        aux_lum[s] = parseFloat(valores[s][2]);
+                        aux_fecha[s] = valores[s][3] + ' ' + valores[s][4];
+                        fuera_linea[s] = true;
+                        document.getElementById('sensor-' + s).style.display="none";
+                    } else {
+                        aux_temp[s] = 'ERROR'; 
+                        aux_hum[s] = 'ERROR';
+                        aux_lum[s] = 'ERROR';
+                        fuera_linea[s] = false;
+                        document.getElementById('sensor-' + s).style.display="inline";
+                    }
+                }
+                
+                for (var s=0; s < 3; s++){
+                    console.log('');
+                    console.log('Squidbee ' + s);
+                    console.log('Temp:' + aux_temp[s]);
+                    console.log('Hum:' + aux_hum[s]);
+                    console.log('Lum:' + aux_lum[s]);
+                    console.log('Fecha:' + aux_fecha[s]);
+                    console.log('');
+                }
+                
+            }
+*/           
+/*            function update_graph_2 () {
+
+                delete lines;
+
+                RGraph.AJAX('/getdata/', myCallback);
+                for (i=0; i<NUM_FILAS; i++) {
+                    /*
+                    console.log ('');
+                    console.log('Sensor: ' + i);
+                    console.log ('Temp=>' + aux_temp[i]);
+                    console.log ('Hum=>' + aux_hum[i]);
+                    console.log ('Lum=>' + aux_lum[i]);
+                    console.log ('');
+                    */
+/*                    if (aux_temp[i] != 'ERROR') {
+                        temperature_array[i] = [aux_temp[i]].concat(temperature_array[i]);
+                        humidity_array[i] = [aux_hum[i]].concat(humidity_array[i]);
+                        luminosity_array[i] = [aux_lum[i]].concat(luminosity_array[i]);
+                        gauges[i].value = aux_temp[i];
+                        RGraph.Effects.Gauge.Grow(gauges[i]);
+                    } else {
+                        temperature_data[i] = [null].concat(temperature_array[i]);
+                        humidity_data[i] = [null].concat(humidity_array[i]);
+                        luminosity_data[i] = [null].concat(luminosity_array[i]);
+                    }
+                    temperature_array[i].pop();
+                    humidity_array[i].pop();
+                    luminosity_array[i].pop();
+                    
+                    RGraph.Clear(document.getElementById('linear-graph-' + i));
+                    
+                    lines[i] = new RGraph.Line('linear-graph-' + i, temperature_array[i], humidity_array[i], luminosity_array[i]);
+                    lines[i].Set('chart.colors', ['red', 'blue', 'green']);
+                    lines[i].Set('chart.linewidth', 1);
+                    lines[i].Set('chart.filled', false);
+                    lines[i].Set('chart.fillstyle', 'rgba(128,255,128,0.5)');
+                    lines[i].Set('chart.ymin', 0);
+                    lines[i].Set('chart.ymax', 1000);
+                    lines[i].Set('chart.numxticks', 5);
+                    lines[i].Set('chart.labels', ['Now','25s','50s','75s','100s','125s']);
+                    lines[i].Set('chart.noaxes', true);
+                    lines[i].Draw();
+                }
+              
+                setTimeout(function(){ update_graph() }, 6000);
+            }
+*/           
+            //new_graph();
+            
+            //update_graph();
+/*
+        }
+*/
+    </script>
+    <script>
+        function new_graph()
+        {
+            var gutterLeft = 100;
+            var gutterRight = 25;
+            var gutterTop   = 25;
+
+            var line1 = new RGraph.Line('cvs', [1,3,5,2,5,6,8,4,4,5,3,6]);
+            line1.Set('chart.ymax', 10);
+            line1.Set('chart.hmargin', 5);
+            line1.Set('chart.gutter.right', gutterRight);
+            line1.Set('chart.gutter.left', gutterLeft);
+            line1.Set('chart.gutter.top', gutterTop);
+            line1.Set('chart.labels', ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']);
+            line1.Set('chart.tooltips', ['rJan','rFeb','rMar','rApr','rMay','rJun','rJul','rAug','rSep','rOct','rNov','rDec']);
+            line1.Set('chart.colors', ['red', 'green', 'blue']);
+            line1.Set('chart.key', ['Flow rate', 'Speed', 'Pressure']);
+            line1.Set('chart.key.position', 'gutter');
+            line1.Set('chart.key.position.gutter.boxed', false);
+            line1.Set('chart.key.position.x', 275);
+            line1.Set('chart.noaxes', true);
+            line1.Set('chart.ylabels', false);
+            line1.Draw();
+    
+            var line2 = new RGraph.Line('cvs', [54,53,56,58,57,53,49,52,53,56,61,58]);
+            line2.Set('chart.ymax', 100);
+            line2.Set('chart.background.grid', false);
+            line2.Set('chart.colors', ['green']);
+            line2.Set('chart.hmargin', 5);
+            line2.Set('chart.noaxes', true);
+            line2.Set('chart.gutter.right', gutterRight);
+            line2.Set('chart.gutter.left', gutterLeft);
+            line2.Set('chart.gutter.top', gutterTop);
+            line2.Set('chart.tooltips', ['gJan','gFeb','gMar','gApr','gMay','gJun','gJul','gAug','gSep','gOct','gNov','gDec']);
+            line2.Set('chart.ylabels', false);
+            line2.Draw();
+    
+            var line3 = new RGraph.Line('cvs', [31,35,32,36,34,32,33,35,28,17,18,18]);
+            line3.Set('chart.ymax', 50);
+            line3.Set('chart.background.grid', false);
+            line3.Set('chart.ylabels', false);
+            line3.Set('chart.noaxes', true);
+            line3.Set('chart.colors', ['blue']);
+            line3.Set('chart.hmargin', 5);
+            line3.Set('chart.gutter.right', gutterRight);
+            line3.Set('chart.gutter.left', gutterLeft);
+            line3.Set('chart.gutter.top', gutterTop);
+            line3.Set('chart.tooltips', ['bJan','bFeb','bMar','bApr','bMay','bJun','bJul','bAug','bSep','bOct','bNov','bDec']);
+    
+    
+            /**
+            * This draws the extra axes. It's run whenever the line3 object is drawn
+            */
+            myFunc = function ()
+            {
+                RGraph.DrawAxes(line1, {
+                                        'axis.x': line1.canvas.width - gutterRight + 5,
+                                        'axis.color': 'red',
+                                        'axis.text.color': 'red',
+                                        'axis.max': 30,
+                                        'axis.min': 0,
+                                        'axis.align': 'right'
+                                       });
+                RGraph.DrawAxes(line2, {
+                                        'axis.x': 90,
+                                        'axis.y': 25,
+                                        'axis.color': 'green',
+                                        'axis.text.color': 'green',
+                                        'axis.max': 1000
+                                       });
+                RGraph.DrawAxes(line3, {
+                                        'axis.x': 45,
+                                        'axis.y': 25,
+                                        'axis.color': 'blue',
+                                        'axis.text.color': 'blue',
+                                        'axis.max': 1000
+                                       });
+            };
+            RGraph.AddCustomEventListener(line3, 'ondraw', myFunc);
+    
+            line3.Draw();
+            //TODO: http://www.rgraph.net/demos/line08.html
+        }
+    </script>
+{% endblock %}
+
+{% block content %}
+
+
+
+
+    {% for node, values in sensors.items %}
+        <div class="row">
+            <h1>{{ node.name }}<a id="sensor-{{node.id}}-error" class="error"> ({% trans "Node offline" %})</a></h1>
+            <canvas id="gauge-widget-{{ node.id }}" class="gauge-graph" width="200" height="200">[No canvas support]</canvas>   
+            <canvas id="linear-graph-{{ node.id }}" class="lineal-graph" width="700" height="300">[No canvas support]</canvas>
+            <p id="options-sensor-{{ node.id }}" class="show-table center"><a id="show-table-{{ node.id }}" href="#">{% trans "Show more data (no auto-update)" %}</a> | <a href="/showdata/{{ node.id }}">{% trans "Show entire data of this sensor" %}</a></p>
+
+            <table id="table-sensor-{{ node.id }}" class="table-sensor">
+                <tr class="cabecera">
+                    <th>{% trans "Node" %}</td>
+                    <th>{% trans "Date" %}</td>
+                    <th>{% trans "Temperature" %}</td>
+                    <th>{% trans "Humidity" %}</td>
+                    <th>{% trans "Luminosity" %}</td>
+                </tr>
+                {% for v in values|slice:":20" %}
+                <tr>
+                    <td>{{ v.node.id }}</td>
+                    <td>{{ v.date|date:"d/m/Y H:i:s" }}</td>
+                    <td>{{ v.temperature|unlocalize }}</td>
+                    <td>{{ v.humidity|unlocalize }}</td>
+                    <td>{{ v.luminosity|unlocalize }}</td>
+                </tr>
+            {% endfor %}
+            </table>
+        </div>
+    {% endfor %}
+    <div class="row">
+        <h1>Sala de elaboración (A) <a id="sensor-0" class="error">(fuera de línea)</a></h1>
+        <canvas style="float:none" id="fake-gauge-graph-0" class="gauge-graph" width="200" height="200">[No canvas support]</canvas>   
+        <canvas style="float:none" id="fake-gauge-graph-1" class="gauge-graph" width="200" height="200">[No canvas support]</canvas>   
+        <canvas style="float:none" id="gauge-graph-0" class="gauge-graph" width="200" height="200">[No canvas support]</canvas>   
+        <canvas style="margin-left:20px;" id="linear-graph-0" class="lineal-graph" width="800" height="150">[No canvas support]</canvas>
+        <p><a href="/showdata/0">Ver más</a></p>
+    </div>
+    
+    {% comment %}
+    {% for node, values in sensors.items %}
+        <p>Nodo: {{ node }}</p>
+        {% for v in values %}
+            <li>{{ v }}</li>
+        {% empty %}
+            <li>sin datos</li>
+        {% endfor %}
+    {% endfor %}
+    {% endcomment %}
+{% endblock %}
+

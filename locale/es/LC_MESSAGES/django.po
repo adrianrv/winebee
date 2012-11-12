@@ -1,0 +1,139 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2012-10-27 13:26+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+
+#: frontend/admin.py:14 frontend/models.py:25
+#: templates/default/frontend/index.html:424
+#: templates/default/frontend/showdata.html:15
+msgid "Date"
+msgstr "Fecha"
+
+#: frontend/models.py:9
+msgid "Name"
+msgstr "Nombre"
+
+#: frontend/models.py:10
+msgid "Description"
+msgstr "Descripción"
+
+#: frontend/models.py:15 frontend/models.py:20
+#: templates/default/frontend/index.html:423
+msgid "Node"
+msgstr "Nodo"
+
+#: frontend/models.py:16
+msgid "Nodes"
+msgstr "Nodos"
+
+#: frontend/models.py:22 templates/default/frontend/index.html:107
+#: templates/default/frontend/index.html:425
+#: templates/default/frontend/showdata.html:16
+msgid "Temperature"
+msgstr "Temperatura"
+
+#: frontend/models.py:23 templates/default/frontend/index.html:107
+#: templates/default/frontend/index.html:426
+#: templates/default/frontend/showdata.html:17
+msgid "Humidity"
+msgstr "Humedad"
+
+#: frontend/models.py:24 templates/default/frontend/index.html:107
+#: templates/default/frontend/index.html:427
+#: templates/default/frontend/showdata.html:18
+msgid "Luminosity"
+msgstr "Luminosidad"
+
+#: frontend/models.py:30
+msgid "Data"
+msgstr "Dato"
+
+#: frontend/models.py:31
+msgid "Datas"
+msgstr "Datos"
+
+#: frontend/views.py:22
+#, python-format
+msgid "ERROR: Node %(node)s does not exists."
+msgstr "ERROR: El nodo %(node)s no existe."
+
+#: frontend/views.py:25 frontend/views.py:53
+msgid "ERROR"
+msgstr "ERROR"
+
+#: frontend/views.py:28
+msgid "ERROR: Parameter incorrectos."
+msgstr "ERROR: Parámetros incorrectos"
+
+#: pagination/templates/pagination/pagination.html:5
+#: pagination/templates/pagination/pagination.html:7
+msgid "previous"
+msgstr "anterior"
+
+#: pagination/templates/pagination/pagination.html:21
+#: pagination/templates/pagination/pagination.html:23
+msgid "next"
+msgstr "siguiente"
+
+#: templates/default/base.html:16
+msgid "Winebee: winemaking process automation"
+msgstr "Winebee: automatización de procesos vinícolas"
+
+#: templates/default/frontend/index.html:18
+msgid "at"
+msgstr "el"
+
+#: templates/default/frontend/index.html:105
+msgid "º C"
+msgstr "º C"
+
+#: templates/default/frontend/index.html:146
+msgid "Lumens"
+msgstr "Lumens"
+
+#: templates/default/frontend/index.html:179
+#: templates/default/frontend/index.html:182
+#: templates/default/frontend/index.html:419
+msgid "Show more data (no auto-update)"
+msgstr "Mostrar más datos (no se actualizará automáticamente)"
+
+#: templates/default/frontend/index.html:180
+msgid "Hide data"
+msgstr "Ocultar datos"
+
+#: templates/default/frontend/index.html:191
+msgid "No data found"
+msgstr "No hay datos que mostrar"
+
+#: templates/default/frontend/index.html:416
+msgid "fuera de línea"
+msgstr ""
+
+#: templates/default/frontend/index.html:419
+msgid "Show entire data of this sensor"
+msgstr "Mostrar los datos completos de este sensor"
+
+#: templates/default/frontend/showdata.html:31
+msgid "No data to show."
+msgstr "No hay datos que mostrar."
+
+#: winebee/settings.py:49
+msgid "Spanish"
+msgstr "Español"
+
+#~ msgid "OK"
+#~ msgstr "OK"
